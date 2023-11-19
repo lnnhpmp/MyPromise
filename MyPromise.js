@@ -5,103 +5,85 @@ const STATE = {
 }
 
 class MyPromise {
-  callbacks = []
-  state = STATE.PENDING
-  value = undefined
+  #thenCbs = []
+  #catchCbs = []
+  #state = STATE.PENDING
+  #value = undefined
+  #onSuccessBinded = this.#onSuccess.bind(this)
+  #onFailBinded = this.#onFail.bind(this)
 
-  constructor(callback) {
+  constructor(cb) {
     try {
-      callback(this.onSuccess.bind(this), this.onFail.bind(this))
-    } catch (err) {
-      MyPromise.onFail(err)
+      cb(this.#onSuccessBinded, this.#onFailBinded)
+    } catch (e) {
+      this.#onFail(e)
     }
   }
 
-  runCallBacks() {
-    if (this.state === STATE.PENDING) {
-      return
+  #runCallBacks() {
+    if (this.#state === STATE.FULFILLED) {
+      this.#thenCbs.forEach((cb) => {
+        cb(this.#value)
+      })
+      this.#thenCbs = []
     }
-    this.callbacks.forEach((cb) => {
-      if (this.state === STATE.FULFILLED) {
-        return cb.onSuccess(this.value)
-      }
-      return cb.onFail(this.value)
+    if (this.#state === STATE.REJECTED) {
+      this.#catchCbs.forEach((cb) => {
+        cb(this.#value)
+      })
+      this.#catchCbs = []
+    }
+  }
+
+  #onSuccess(value) {
+    if (this.#state !== STATE.PENDING) return
+    this.#value = value
+    this.#state = STATE.FULFILLED
+    this.#runCallBacks()
+  }
+
+  #onFail(value) {
+    if (this.#state !== STATE.PENDING) return
+    this.#value = value
+    this.#state = STATE.REJECTED
+    this.#runCallBacks()
+  }
+
+  then(thenCb, catchCb) {
+    return new MyPromise((resolve, reject) => {
+      this.#thenCbs.push((res) => {
+        if (!thenCb) {
+          resolve(res)
+          return
+        }
+        try {
+          resolve(thenCb(res))
+        } catch (e) {
+          reject(e)
+        }
+      })
+
+      this.#catchCbs.push((res) => {
+        if (!catchCb) {
+          resolve(res)
+          return
+        }
+        try {
+          resolve(catchCb(res))
+        } catch (e) {
+          reject(e)
+        }
+      })
+
+      this.#runCallBacks()
     })
-    this.callbacks = []
   }
 
-  static onSuccess(value) {
-    // only process a promise when it's still pending
-    if (this.state !== STATE.PENDING) {
-      return
-    }
-    this.value = value
-    this.state = STATE.PENDING
-    this.runCallBacks()
+  catch(cb) {
+    this.then(undefined, cb)
   }
 
-  static onFail(value) {
-    if (this.state !== STATE.PENDING) {
-      return
-    }
-    this.value = value
-    this.state = STATE.REJECTED
-    this.runCallBacks()
-  }
-
-  addCallBacks(callbacks) {
-    this.callbacks.push(callbacks)
-    this.runCallBacks()
-  }
-
-  then(onSuccess, onFail) {
-    if (!onSuccess) this.callbacks.push(onSuccess)
-    if (!onFail) this.callbacks.push(onFail)
-    this.runCallBacks()
-    // return new MyPromise((resolve, reject) => {
-    //   this.addCallBacks({
-    //     onSuccess: (result) => {
-    //         console.log('result=', result)
-    //       if (!onSuccess) {
-    //         return resolve(result)
-    //       }
-
-    //       try {
-    //         return resolve(onSuccess(result))
-    //       } catch (err) {
-    //         return reject(err)
-    //       }
-    //     },
-    //     onFail: (result) => {
-    //       if (!onFail) {
-    //         return reject(result)
-    //       }
-
-    //       try {
-    //         return resolve(onFail(result))
-    //       } catch (err) {
-    //         return reject(err)
-    //       }
-    //     },
-    //   })
-    // })
-  }
-
-  catch(callback) {
-    this.then(undefined, callback)
-  }
-
-  finally(callback) {}
+  finally(cb) {}
 }
 
 module.exports = MyPromise
-
-const p = new Promise((resolve, reject) => {
-  resolve(500)
-  resolve(10)
-  resolve(10)
-  reject('error')
-})
-p.then()
-
-p.then()
