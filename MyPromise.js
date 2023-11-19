@@ -11,7 +11,7 @@ class MyPromise {
 
   constructor(callback) {
     try {
-      callback(this.onSuccess, this.onFail)
+      callback(this.onSuccess.bind(this), this.onFail.bind(this))
     } catch (err) {
       MyPromise.onFail(err)
     }
@@ -24,9 +24,8 @@ class MyPromise {
     this.callbacks.forEach((cb) => {
       if (this.state === STATE.FULFILLED) {
         return cb.onSuccess(this.value)
-      } else {
-        return cb.onFail(this.value)
       }
+      return cb.onFail(this.value)
     })
     this.callbacks = []
   }
@@ -50,10 +49,49 @@ class MyPromise {
     this.runCallBacks()
   }
 
-  then(callback) {
-    this.callbacks.push(callback)
+  addCallBacks(callbacks) {
+    this.callbacks.push(callbacks)
     this.runCallBacks()
   }
+
+  then(onSuccess, onFail) {
+    if (!onSuccess) this.callbacks.push(onSuccess)
+    if (!onFail) this.callbacks.push(onFail)
+    this.runCallBacks()
+    // return new MyPromise((resolve, reject) => {
+    //   this.addCallBacks({
+    //     onSuccess: (result) => {
+    //         console.log('result=', result)
+    //       if (!onSuccess) {
+    //         return resolve(result)
+    //       }
+
+    //       try {
+    //         return resolve(onSuccess(result))
+    //       } catch (err) {
+    //         return reject(err)
+    //       }
+    //     },
+    //     onFail: (result) => {
+    //       if (!onFail) {
+    //         return reject(result)
+    //       }
+
+    //       try {
+    //         return resolve(onFail(result))
+    //       } catch (err) {
+    //         return reject(err)
+    //       }
+    //     },
+    //   })
+    // })
+  }
+
+  catch(callback) {
+    this.then(undefined, callback)
+  }
+
+  finally(callback) {}
 }
 
 module.exports = MyPromise

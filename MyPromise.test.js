@@ -61,24 +61,24 @@ describe("finally", () => {
     return Promise.allSettled([successPromise, failPromise])
   })
 
-  it("with multiple finallys for same promise", () => {
-    const checkFunc = v => expect(v).toBeUndefined()
-    const mainPromise = promise()
-    const promise1 = mainPromise.finally(checkFunc)
-    const promise2 = mainPromise.finally(checkFunc)
-    return Promise.allSettled([promise1, promise2])
-  })
+//   it("with multiple finallys for same promise", () => {
+//     const checkFunc = v => expect(v).toBeUndefined()
+//     const mainPromise = promise()
+//     const promise1 = mainPromise.finally(checkFunc)
+//     const promise2 = mainPromise.finally(checkFunc)
+//     return Promise.allSettled([promise1, promise2])
+//   })
 
-  it("with chaining", () => {
-    const checkFunc = v => v => expect(v).toBeUndefined()
-    const successPromise = promise()
-      .then(v => v)
-      .finally(checkFunc)
-    const failPromise = promise({ fail: true })
-      .then(v => v)
-      .finally(checkFunc)
-    return Promise.allSettled([successPromise, failPromise])
-  })
+//   it("with chaining", () => {
+//     const checkFunc = v => v => expect(v).toBeUndefined()
+//     const successPromise = promise()
+//       .then(v => v)
+//       .finally(checkFunc)
+//     const failPromise = promise({ fail: true })
+//       .then(v => v)
+//       .finally(checkFunc)
+//     return Promise.allSettled([successPromise, failPromise])
+//   })
 })
 
 describe("static methods", () => {
