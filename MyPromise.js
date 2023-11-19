@@ -36,17 +36,35 @@ class MyPromise {
   }
 
   #onSuccess(value) {
-    if (this.#state !== STATE.PENDING) return
-    this.#value = value
-    this.#state = STATE.FULFILLED
-    this.#runCallBacks()
+    queueMicrotask(() => {
+      if (this.#state !== STATE.PENDING) return
+
+      if (value instanceof MyPromise) {
+        value.then(this.#onSuccessBinded, this.#onFailBinded)
+        return
+      }
+      this.#value = value
+      this.#state = STATE.FULFILLED
+      this.#runCallBacks()
+    })
   }
 
   #onFail(value) {
-    if (this.#state !== STATE.PENDING) return
-    this.#value = value
-    this.#state = STATE.REJECTED
-    this.#runCallBacks()
+    queueMicrotask(() => {
+      if (this.#state !== STATE.PENDING) return
+
+      if (value instanceof MyPromise) {
+        value.then(this.#onSuccessBinded, this.#onFailBinded)
+        return
+      }
+
+      if (this.#catchCbs.length === 0) {
+        throw new UncaughtPromiseError(value)
+      }
+      this.#value = value
+      this.#state = STATE.REJECTED
+      this.#runCallBacks()
+    })
   }
 
   then(thenCb, catchCb) {
@@ -80,10 +98,29 @@ class MyPromise {
   }
 
   catch(cb) {
-    this.then(undefined, cb)
+    return this.then(undefined, cb)
   }
 
-  finally(cb) {}
+  finally(cb) {
+    return this.then(
+      (res) => {
+        cb()
+        return res
+      },
+      (res) => {
+        cb()
+        throw res
+      },
+    )
+  }
+}
+
+class UncaughtPromiseError extends Error {
+  constructor(error) {
+    super(error)
+
+    this.stack = `(in promise) ${error.stack}`
+  }
 }
 
 module.exports = MyPromise
